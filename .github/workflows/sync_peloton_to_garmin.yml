@@ -24,7 +24,7 @@ jobs:
     - run: mkdir -p ${{ env.OUTPUT_DIR }}
     - name: Get today's date
       id: date
-      run: echo "date=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
+      run: echo "TODAY=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
     - name: Create config file
       run: |
         cat <<EOT > /app/configuration.local.json 
@@ -41,11 +41,11 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "NumWorkoutsToDownload": 10,
+            "NumWorkoutsToDownload": 5,
             "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
-            "Upload": true,
+            "Upload": false,
             "FormatToUpload": "fit"
           },
           "Observability": {
@@ -62,7 +62,7 @@ jobs:
           }
         }
         EOT
-    - name: Run sync and upload
+    - name: Run sync (download only)
       run: /app/ConsoleClient
       if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
       working-directory: /app
@@ -72,6 +72,17 @@ jobs:
         P2G_GARMIN__EMAIL: ${{ secrets.P2G_GARMIN__EMAIL }}
         P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
         TZ: Europe/London
+
+    - name: Upload today's workouts
+      run: |
+        for file in /app/output/*.fit; do
+          if [[ $(stat -c %y "$file" | cut -d' ' -f1) == "$TODAY" ]]; then
+            echo "Uploading $file to Garmin"
+            /app/ConsoleClient --upload "$file"
+          else
+            echo "Skipping $file (not from today)"
+          fi
+        done
 
     - name: archive files
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
