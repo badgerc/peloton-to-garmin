@@ -1,88 +1,91 @@
+# This is a workflow that will automatically sync your Peloton rides with Garmin
+
 name: Sync workflow
 
+# Controls when the action will run.
 on:
+  workflow_dispatch:
+    inputs:
+      workoutsToDownload:
+        type: number
+        default: "5"
+      saveLocalCopy:
+        type: boolean
+        default: false
   schedule:
-    - cron: '1 12 * * *' # 12:00 PM UK time all year round
+    - cron: '1 12 * * *'  # Run at 12:00 PM UK Time All Year Round (or)
+#    - cron: '0 12 * * *'  # Run at 12:00 PM UK Time During Winter (UTC)
 
 jobs:
   sync:
     runs-on: ubuntu-latest
-    container:
-      image: philosowaffle/peloton-to-garmin:console-stable
+    # The type of runner that the job will run on
+    container: 
+      image:  philosowaffle/peloton-to-garmin:console-stable
     steps:
-      - name: Set env
-        run: echo "OUTPUT_DIR=/app/output" >> $GITHUB_ENV
-      - run: mkdir -p ${{ env.OUTPUT_DIR }}
-
-      - name: Get today's date in YYYY-MM-DD format (UTC)
-        id: get_date
-        run: |
-          echo "TODAY_DATE=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
-          echo "TODAY_UTC=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV #Explicitly get UTC date
-          echo "TODAY_LONDON=$(TZ=Europe/London date +'%Y-%m-%d')" >> $GITHUB_ENV #Date in London Time
-
-      - name: Create config file
-        env:
-          DEFAULT_WORKOUT_NUM: 5
-        run: |
-          cat <<EOT > /app/configuration.local.json
-          {
-            "App": {
-              "EnablePolling": false
+    - name: Set env
+      run: echo "OUTPUT_DIR=/app/output" >> $GITHUB_ENV
+    - run: mkdir -p ${{ env.OUTPUT_DIR }}
+    - name: Create config file
+      env:
+        DEFAULT_WORKOUT_NUM: 5
+      run: |
+        cat <<EOT > /app/configuration.local.json 
+        {
+          "App": {
+            "EnablePolling": false
+          },
+          "Format": {
+            "Fit": true,
+            "Json": false,
+            "Tcx": false,
+            "SaveLocalCopy": ${{ github.event.inputs.saveLocalCopy || false }},
+            "IncludeTimeInHRZones": false,
+            "IncludeTimeInPowerZones": false
+          },
+          "Peloton": {
+            "NumWorkoutsToDownload": ${{ github.event.inputs.workoutsToDownload || env.DEFAULT_WORKOUT_NUM }},
+            "ExcludeWorkoutTypes": ["Stretching", "Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"],
+          },
+          "Garmin": {
+            "Upload": true,
+            "FormatToUpload": "fit"
+          },
+          "Observability": {
+            "Prometheus": {
+              "Enabled": false
             },
-            "Format": {
-              "Fit": true,
-              "Json": false,
-              "Tcx": false,
-              "SaveLocalCopy": ${{ github.event.inputs.saveLocalCopy || false }},
-              "IncludeTimeInHRZones": false,
-              "IncludeTimeInPowerZones": false
+            "Jaeger": {
+              "Enabled": false
             },
-            "Peloton": {
-              "FromDate": "${{ env.TODAY_UTC }}", # Use UTC date for Peloton API
-              "ToDate": "${{ env.TODAY_UTC }}",   # Use UTC date for Peloton API
-              "NumWorkoutsToDownload": ${{ github.event.inputs.workoutsToDownload || env.DEFAULT_WORKOUT_NUM }},
-              "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"],
-            },
-            "Garmin": {
-              "Upload": true,
-              "FormatToUpload": "fit"
-            },
-            "Observability": {
-              "Prometheus": {
-                "Enabled": false
-              },
-              "Jaeger": {
-                "Enabled": false
-              },
-              "Serilog": {
-                "Using": [ "Serilog.Sinks.Console"],
-                "MinimumLevel": "Information"
-              }
+            "Serilog": {
+              "Using": [ "Serilog.Sinks.Console"],
+              "MinimumLevel": "Information"
             }
           }
-          EOT
+        }
+        EOT
+    - run: /app/ConsoleClient
+      if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
+      working-directory: /app
+      env:
+        P2G_PELOTON__EMAIL: ${{ secrets.P2G_PELOTON__EMAIL }}
+        P2G_PELOTON__PASSWORD: ${{ secrets.P2G_PELOTON__PASSWORD }}
+        P2G_GARMIN__EMAIL: ${{ secrets.P2G_GARMIN__EMAIL }}
+        P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
+        TZ: Europe/London
 
-      - name: Run peloton-to-garmin
-        if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
-        working-directory: /app
-        env:
-          P2G_PELOTON__EMAIL: ${{ secrets.P2G_PELOTON__EMAIL }}
-          P2G_PELOTON__PASSWORD: ${{ secrets.P2G_PELOTON__PASSWORD }}
-          P2G_GARMIN__EMAIL: ${{ secrets.P2G_GARMIN__EMAIL }}
-          P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
-          TZ: Europe/London # Set the timezone here
-
-      - name: archive files
-        if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
-        run: |
-          apt-get update
-          apt-get install -y zip
-          zip -r -j output.zip ${{ env.OUTPUT_DIR }}
-
-      - uses: actions/upload-artifact@v3
-        if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
-        with:
-          name: output
-          path: output.zip
-          if-no-files-found: error
+    - name: archive files
+      # saveLocalCopy can be set when workflow action is manually run otherwise it's always skipped 
+      if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
+      run: |
+        apt-get update
+        apt-get install -y zip
+        zip -r -j output.zip ${{ env.OUTPUT_DIR }}
+        
+    - uses: actions/upload-artifact@v3
+      if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
+      with:
+        name: output
+        path: output.zip
+        if-no-files-found: error
