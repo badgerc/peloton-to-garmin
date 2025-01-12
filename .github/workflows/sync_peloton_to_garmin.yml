@@ -74,9 +74,12 @@ jobs:
         TZ: Europe/London
 
     - name: Upload today's workouts
+      shell: bash
       run: |
+        shopt -s nullglob
         for file in /app/output/*.fit; do
-          if [[ $(stat -c %y "$file" | cut -d' ' -f1) == "$TODAY" ]]; then
+          file_date=$(stat -c %y "$file" | cut -d' ' -f1)
+          if [[ "$file_date" == "$TODAY" ]]; then
             echo "Uploading $file to Garmin"
             /app/ConsoleClient --upload "$file"
           else
