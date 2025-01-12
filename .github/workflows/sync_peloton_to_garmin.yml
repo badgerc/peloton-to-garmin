@@ -8,7 +8,7 @@ on:
     inputs:
       workoutsToDownload:
         type: number
-        default: "5"
+        default: "2"
       saveLocalCopy:
         type: boolean
         default: false
@@ -45,7 +45,7 @@ jobs:
           },
           "Peloton": {
             "NumWorkoutsToDownload": ${{ github.event.inputs.workoutsToDownload || env.DEFAULT_WORKOUT_NUM }},
-            "ExcludeWorkoutTypes": ["Stretching", "Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"],
+            "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"],
           },
           "Garmin": {
             "Upload": true,
