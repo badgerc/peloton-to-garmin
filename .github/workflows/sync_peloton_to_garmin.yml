@@ -41,11 +41,11 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "NumWorkoutsToDownload": 100,
+            "NumWorkoutsToDownload": 10,
             "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
-            "Upload": false,
+            "Upload": true,
             "FormatToUpload": "fit"
           },
           "Observability": {
@@ -62,28 +62,8 @@ jobs:
           }
         }
         EOT
-    - name: Run sync without uploading
+    - name: Run sync and upload
       run: /app/ConsoleClient
-      if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
-      working-directory: /app
-      env:
-        P2G_PELOTON__EMAIL: ${{ secrets.P2G_PELOTON__EMAIL }}
-        P2G_PELOTON__PASSWORD: ${{ secrets.P2G_PELOTON__PASSWORD }}
-        P2G_GARMIN__EMAIL: ${{ secrets.P2G_GARMIN__EMAIL }}
-        P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
-        TZ: Europe/London
-
-    - name: Filter workouts by today's date
-      run: |
-        mkdir -p /app/filtered_upload
-        find ${{ env.OUTPUT_DIR }} -type f -name "*.fit" -exec bash -c '[[ $(basename {} | cut -d"_" -f1) == "${{ env.date }}" ]] && cp {} /app/filtered_upload/' \;
-    
-    - name: Upload filtered workouts to Garmin
-      run: |
-        for file in /app/filtered_upload/*.fit; do
-          echo "Uploading $file to Garmin..."
-          /app/ConsoleClient --upload "$file"
-        done
       if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
       working-directory: /app
       env:
@@ -98,7 +78,7 @@ jobs:
       run: |
         apt-get update
         apt-get install -y zip
-        zip -r -j output.zip /app/filtered_upload
+        zip -r -j output.zip ${{ env.OUTPUT_DIR }}
         
     - uses: actions/upload-artifact@v3
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
