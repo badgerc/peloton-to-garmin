@@ -1,5 +1,4 @@
 # This is a workflow that will automatically sync your Peloton rides with Garmin
-
 name: Sync workflow
 
 # Controls when the action will run.
@@ -41,7 +40,7 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "NumWorkoutsToDownload": 5,
+            "NumWorkoutsToDownload": 100,
             "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
