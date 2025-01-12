@@ -1,7 +1,5 @@
-# This is a workflow that will automatically sync your Peloton rides with Garmin
 name: Sync workflow
 
-# Controls when the action will run.
 on:
   workflow_dispatch:
     inputs:
@@ -73,7 +71,14 @@ jobs:
         TZ: Europe/London
 
     - name: Debug: List files in output directory
-      run: ls -l /app/output
+      run: |
+        echo "Listing files in /app/output/"
+        ls -l /app/output/
+
+    - name: Debug: Print environment variables
+      run: |
+        echo "OUTPUT_DIR is $OUTPUT_DIR"
+        echo "TODAY is $TODAY"
 
     - name: Upload today's workouts
       shell: bash
@@ -100,7 +105,7 @@ jobs:
         apt-get update
         apt-get install -y zip
         zip -r -j output.zip ${{ env.OUTPUT_DIR }}
-        
+
     - uses: actions/upload-artifact@v3
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
       with:
