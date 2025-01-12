@@ -73,12 +73,18 @@ jobs:
         P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
         TZ: Europe/London
 
+    - name: Debug: List files in output directory
+      run: ls -l /app/output
+
     - name: Upload today's workouts
       shell: bash
       run: |
         shopt -s nullglob
+        echo "Today's date is $TODAY"
         for file in /app/output/*.fit; do
+          echo "Processing file: $file"
           file_date=$(date -r "$file" +'%Y-%m-%d')
+          echo "File date is $file_date"
           if [[ "$file_date" == "$TODAY" ]]; then
             echo "Uploading $file to Garmin"
             /app/ConsoleClient --upload "$file"
@@ -86,6 +92,8 @@ jobs:
             echo "Skipping $file (not from today)"
           fi
         done
+      env:
+        TODAY: ${{ env.TODAY }}
 
     - name: Archive files
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
