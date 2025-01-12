@@ -41,7 +41,7 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "NumWorkoutsToDownload": 2,
+            "NumWorkoutsToDownload": 4,
             "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
