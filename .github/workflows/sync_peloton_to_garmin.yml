@@ -13,7 +13,8 @@ on:
         type: boolean
         default: false
   schedule:
-    - cron: '0 1 * * *'
+    - cron: '1 12 * * *'  # Run at 12:00 PM UK Time All Year Round (or)
+#    - cron: '0 12 * * *'  # Run at 12:00 PM UK Time During Winter (UTC)
 
 jobs:
   sync:
@@ -71,7 +72,7 @@ jobs:
         P2G_PELOTON__PASSWORD: ${{ secrets.P2G_PELOTON__PASSWORD }}
         P2G_GARMIN__EMAIL: ${{ secrets.P2G_GARMIN__EMAIL }}
         P2G_GARMIN__PASSWORD: ${{ secrets.P2G_GARMIN__PASSWORD }}
-        TZ: America/Chicago
+        TZ: Europe/London
 
     - name: archive files
       # saveLocalCopy can be set when workflow action is manually run otherwise it's always skipped 
