@@ -78,7 +78,7 @@ jobs:
       run: |
         shopt -s nullglob
         for file in /app/output/*.fit; do
-          file_date=$(stat -c %y "$file" | cut -d' ' -f1)
+          file_date=$(date -r "$file" +'%Y-%m-%d')
           if [[ "$file_date" == "$TODAY" ]]; then
             echo "Uploading $file to Garmin"
             /app/ConsoleClient --upload "$file"
@@ -87,7 +87,7 @@ jobs:
           fi
         done
 
-    - name: archive files
+    - name: Archive files
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
       run: |
         apt-get update
