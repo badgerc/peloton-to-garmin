@@ -22,6 +22,9 @@ jobs:
     - name: Set env
       run: echo "OUTPUT_DIR=/app/output" >> $GITHUB_ENV
     - run: mkdir -p ${{ env.OUTPUT_DIR }}
+    - name: Get today's date
+      id: date
+      run: echo "date=$(date -u +'%Y-%m-%d')" >> $GITHUB_ENV
     - name: Create config file
       run: |
         cat <<EOT > /app/configuration.local.json 
@@ -38,7 +41,7 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "DownloadWorkoutsFromToday": true,
+            "NumWorkoutsToDownload": 2,
             "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
@@ -59,7 +62,10 @@ jobs:
           }
         }
         EOT
-    - run: /app/ConsoleClient
+    - name: Run sync and filter by today's date
+      run: |
+        /app/ConsoleClient
+        find ${{ env.OUTPUT_DIR }} -type f -name "*.fit" -exec bash -c '[[ $(basename {} | cut -d"_" -f1) == "${{ env.date }}" ]] && echo "Keeping {}" || rm {}' \;
       if: ${{ env.P2G_PELOTON__EMAIL && env.P2G_PELOTON__PASSWORD && env.P2G_GARMIN__EMAIL && env.P2G_GARMIN__PASSWORD }}
       working-directory: /app
       env:
