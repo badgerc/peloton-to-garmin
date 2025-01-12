@@ -6,9 +6,6 @@ name: Sync workflow
 on:
   workflow_dispatch:
     inputs:
-      workoutsToDownload:
-        type: number
-        default: "2"
       saveLocalCopy:
         type: boolean
         default: false
@@ -19,16 +16,13 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # The type of runner that the job will run on
     container: 
-      image:  philosowaffle/peloton-to-garmin:console-stable
+      image: philosowaffle/peloton-to-garmin:console-stable
     steps:
     - name: Set env
       run: echo "OUTPUT_DIR=/app/output" >> $GITHUB_ENV
     - run: mkdir -p ${{ env.OUTPUT_DIR }}
     - name: Create config file
-      env:
-        DEFAULT_WORKOUT_NUM: 5
       run: |
         cat <<EOT > /app/configuration.local.json 
         {
@@ -44,8 +38,8 @@ jobs:
             "IncludeTimeInPowerZones": false
           },
           "Peloton": {
-            "NumWorkoutsToDownload": ${{ github.event.inputs.workoutsToDownload || env.DEFAULT_WORKOUT_NUM }},
-            "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"],
+            "DownloadWorkoutsFromToday": true,
+            "ExcludeWorkoutTypes": ["Cycling", "Outdoor Cycling", "BikeBootcamp", "OutdoorRunning", "OutdoorWalking", "Cardio", "Circuit", "Strength", "Yoga", "Meditation"]
           },
           "Garmin": {
             "Upload": true,
@@ -59,7 +53,7 @@ jobs:
               "Enabled": false
             },
             "Serilog": {
-              "Using": [ "Serilog.Sinks.Console"],
+              "Using": ["Serilog.Sinks.Console"],
               "MinimumLevel": "Information"
             }
           }
@@ -76,7 +70,6 @@ jobs:
         TZ: Europe/London
 
     - name: archive files
-      # saveLocalCopy can be set when workflow action is manually run otherwise it's always skipped 
       if: ${{ github.event.inputs.saveLocalCopy == 'true' }}
       run: |
         apt-get update
